@@ -37,3 +37,12 @@ The included Actions workflow deploys this repository to GitHub Pages on pushes 
 ## AI music generation and reconstruction
 
 STEM keeps source separation separate from generated replacement material. The connected fal music-generation plugin can create original instrumental layers or replacement passages from ChatGPT. Those outputs may use account credits and are not part of the free Colab run. Import generated audio as a separate track, align it to the song's tempo/key/section, and label it as generated before mixing. The static GitHub Pages frontend does not inherit ChatGPT plugin credentials; never put a fal API key in browser JavaScript.
+
+## Upload and receive results directly on the website using Colab
+
+1. Open the [STEM Colab Bridge notebook](https://colab.research.google.com/github/demtaiwo1-eng/Stem/blob/main/notebooks/STEM_Free_Colab.ipynb) and choose **Runtime → Run all**.
+2. Wait for Colab to print a temporary HTTPS address and a session token.
+3. Open the [STEM website](https://demtaiwo1-eng.github.io/stem.github.io/), paste both values into **Connect your Colab processing session**, and connect.
+4. Upload your recording from the website. The website polls the Colab bridge, then displays audio previews and WAV/MP3 download options for each stem, plus the complete ZIP.
+
+The Colab runtime is the temporary compute server. Keep it running while uploads and jobs are active. If it disconnects or expires, restart the notebook and reconnect using the new URL and token. The URL and token are temporary; the token is required to protect the active bridge. GitHub Pages does not itself run the audio model.
