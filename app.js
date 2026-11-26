@@ -4,14 +4,14 @@ let apiBase=localStorage.getItem("stemApiBase")||"";
 let apiToken=sessionStorage.getItem("stemApiToken")||"";
 apiInput.value=apiBase;tokenInput.value=apiToken;
 function base(){return apiBase.replace(/\/$/,"");}
-function headers(extra={}){return {...extra,"X-STEM-Token":apiToken};}
+function headers(extra={}){return {...extra,"X-STEM-Token":apiToken,"cf-skip-browser-warning":"true"};}
 function setServerStatus(t){serverStatus.textContent=t;}
 async function apiFetch(path,options={}){return fetch(base()+path,{...options,headers:headers(options.headers||{})});}
 $("#save-server").addEventListener("click",async()=>{
  apiBase=apiInput.value.trim().replace(/\/$/,"");apiToken=tokenInput.value.trim();
  if(!apiBase||!apiToken){setServerStatus("Paste both the Colab HTTPS address and the session token.");return;}
  try{
-  const r=await fetch(base()+"/health");if(!r.ok)throw new Error("Health check failed.");
+  const r=await fetch(base()+"/health",{headers:{"cf-skip-browser-warning":"true"}});if(!r.ok)throw new Error("Health check failed.");
   const d=await r.json();if(d.ok===false||!d.authenticated)throw new Error("This does not look like an active STEM Colab bridge.");
   localStorage.setItem("stemApiBase",apiBase);sessionStorage.setItem("stemApiToken",apiToken);
   setServerStatus("Connected to your live Colab session ("+(d.device||"device") +"). Upload your song below.");
