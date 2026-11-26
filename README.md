@@ -12,7 +12,7 @@ Open the [STEM Free Colab Runner](https://colab.research.google.com/github/demta
 4. Wait for the six stems to be generated.
 5. Listen to the six previews and download the result ZIP.
 
-The notebook runs the existing `worker.py` directly. It does not require Gradio, a temporary share server, an API URL, Neon credentials, or paid hosting. The ZIP contains WAV and MP3 exports, an original reference, and a manifest. All stems are normalized to stereo 44.1 kHz and the source duration.
+The notebook runs the existing `worker.py` directly. It does not require Gradio, a temporary share server, an API URL, Neon credentials, or paid hosting. The worker now checks vocal signal levels and, when the six-stem vocal estimate is unusually quiet, attempts a second Demucs model and compares candidates. The ZIP contains WAV and MP3 exports, an original reference, a manifest with signal diagnostics, and a simple stem-sum preview. All stems are normalized to stereo 44.1 kHz and the source duration. The preview is not a professionally mixed/mastered song.
 
 **Free-tier limitation:** Colab is on-demand, not always-on. Google controls free GPU availability, quotas and session duration. Keep the tab open until the ZIP downloads. CPU fallback is supported but can be slow. Do not upload audio you do not own or have permission to process.
 
@@ -32,3 +32,8 @@ Never put database passwords or Neon storage credentials in this repository or b
 ## GitHub Pages
 
 The included Actions workflow deploys this repository to GitHub Pages on pushes to `main`. In repository **Settings → Pages**, set the build/deployment source to **GitHub Actions** if it is not already selected.
+
+
+## AI music generation and reconstruction
+
+STEM keeps source separation separate from generated replacement material. The connected fal music-generation plugin can create original instrumental layers or replacement passages from ChatGPT. Those outputs may use account credits and are not part of the free Colab run. Import generated audio as a separate track, align it to the song's tempo/key/section, and label it as generated before mixing. The static GitHub Pages frontend does not inherit ChatGPT plugin credentials; never put a fal API key in browser JavaScript.
