@@ -27,3 +27,18 @@ Audio processing does not happen on GitHub Pages. Neon stores the job and files 
 ## Important
 
 Do not put database passwords or Neon storage credentials in this repository or in browser JavaScript. The public page is not itself a secure processing backend. Add authentication, upload quotas and retention controls before accepting unrestricted public uploads.
+
+## Free on-demand processing (no paid hosting)
+
+The main page now links to a Google Colab runner built from the open-source STEM worker:
+
+[Launch STEM Free Runner](https://colab.research.google.com/github/demtaiwo1-eng/Stem/blob/main/notebooks/STEM_Free_Colab.ipynb)
+
+1. Open the notebook and choose **Runtime → Run all**.
+2. Wait for the dependencies and Demucs model to install/download.
+3. Upload an audio file in the STEM panel.
+4. Listen to the six estimated stems and download the complete ZIP.
+
+This is a free, user-started processing path, not an always-on cloud service. Colab free GPU availability, session duration, compute limits and temporary share links are controlled by Google. Keep the notebook session open while processing and download your result before the session ends. CPU fallback is available but can be much slower. No Neon credentials are required for this Colab workflow; processing is performed in the temporary Colab session.
+
+The original API/server connection remains available for users who run their own STEM backend. GitHub Pages itself does not run Demucs.
