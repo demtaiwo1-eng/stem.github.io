@@ -1,11 +1,86 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#101827"><meta name="description" content="STEM Audio Workbench — separate a song into aligned audio stems."><title>STEM — Audio Workbench</title><link rel="stylesheet" href="styles.css"></head>
-<body><header class="topbar"><a class="brand" href="#"><span class="brand-mark">S</span><span>STEM<span class="brand-sub"> AUDIO WORKBENCH</span></span></a><span class="status-pill"><i></i> Open-source engine</span></header>
-<main><section class="hero"><div class="eyebrow">AI-ASSISTED SOURCE SEPARATION</div><h1>Hear every layer.<br><em>Work with every stem.</em></h1><p class="intro">Upload a finished song or a ZIP package containing your mix and vocal/reference tracks. Create aligned stems and a conservatively enhanced vocal alternate.</p></section>
-<section class="free-runner"><div><div class="eyebrow">FREE / ON-DEMAND PROCESSING</div><h2>Run STEM free in Google Colab</h2><p>Use the button to open the STEM notebook in Google Colab. Start the free processing session there, then return to this website to upload your song and receive the stems here.</p><ol class="manual-steps"><li><strong>Open the notebook</strong> with the button below and sign in to Google if asked.</li><li><strong>Start the runtime</strong>: choose Runtime → Run all, then approve any Google prompts and wait for the secure tunnel URL and session token to appear.</li><li><strong>Return to this website</strong>, paste the URL and token into the connection fields, press Connect, then upload your song.</li></ol><p><strong>Keep the Colab tab open while processing.</strong> The session URL and token change after a restart. Google controls free GPU availability and session limits.</p></div><a class="free-runner-link" href="https://colab.research.google.com/github/demtaiwo1-eng/Stem/blob/main/notebooks/STEM_Free_Colab.ipynb" target="_blank" rel="noopener" aria-label="Open STEM in Google Colab to start the manual processing session">Open Colab &amp; start STEM <span>↗</span></a></section>
-<section class="workspace"><div class="section-head"><div><div class="eyebrow">OPTIONAL / ADVANCED</div><h2>Connect your Colab processing session</h2></div><span class="tag">Temporary Colab connection</span></div><p class="server-help">Start the STEM Colab Bridge notebook first and keep its runtime running. Copy the temporary HTTPS tunnel address and session token from Colab, then enter them below. Your song will upload from this website and the results will return here.</p><div class="server-row"><input id="api-url" type="url" placeholder="https://your-temporary-colab.trycloudflare.com" aria-label="Temporary Colab bridge URL"><input id="api-token" type="password" autocomplete="off" placeholder="Colab session token" aria-label="Colab session token"><button id="save-server" class="secondary" type="button">Connect</button></div><p class="server-help" id="server-status">Paste the temporary Colab HTTPS address and token. These change whenever you restart the Colab bridge.</p>
-<div class="section-head upload-head"><div><div class="eyebrow">01 / YOUR RECORDING</div><h2>Upload audio from this website</h2></div><span class="tag">MP3 · WAV · FLAC · M4A</span></div>
-<form id="upload-form"><label class="dropzone" id="dropzone" for="audio-file"><span class="upload-icon">↑</span><strong>Drop an audio file or ZIP package here</strong><span>or browse audio / ZIP files from your device</span><small>ZIP may contain your full mix and vocal/reference audio · Maximum 250 MB</small><input id="audio-file" name="audio" type="file" accept="audio/*,.flac,.m4a,.opus,.zip,application/zip" required></label><div class="selected-file" id="selected-file" hidden></div><button class="primary" id="submit-btn" type="submit">Separate my audio <span>→</span></button></form>
-<div class="job" id="job" hidden aria-live="polite"><div class="job-top"><div><div class="eyebrow">02 / PROCESSING</div><h3 id="job-title">Preparing your stems</h3></div><span class="job-state" id="job-state">WORKING</span></div><div class="progress"><span id="progress-bar"></span></div><p id="job-message">Your audio is being prepared…</p><a class="download" id="download-link" href="#" hidden>Download complete stem pack <span>↓</span></a></div><div id="results-panel" class="results-panel" hidden aria-live="polite"><div class="eyebrow">03 / YOUR RESULTS</div><h2>Listen to your separated tracks</h2><div id="results-grid" class="results-grid"></div></div></section>
-<section class="stem-section"><div class="eyebrow">04 / WHAT YOU RECEIVE</div><h2>Recovered, inspected and aligned audio layers</h2><p class="note">STEM now checks unusually quiet vocal output and can try a second separation model. Each export includes signal diagnostics, and the ZIP includes a simple stem-sum preview. These are recovery attempts and mix previews, not guarantees of studio-quality isolation or professional mastering.</p><div class="stem-grid"><article><b>01</b><strong>Vocals</strong><span>Lead and backing vocal content (may remain blended)</span></article><article><b>02</b><strong>Drums</strong><span>Drum and percussion content</span></article><article><b>03</b><strong>Bass</strong><span>Bass-range musical content</span></article><article><b>04</b><strong>Guitar</strong><span>Guitar-like content</span></article><article><b>05</b><strong>Piano</strong><span>Piano-like content</span></article><article><b>06</b><strong>Other</strong><span>Remaining accompaniment and sounds</span></article></div><p class="note"><strong>Music production:</strong> Original instrumental passages and replacement layers can be generated separately with the connected fal music-generation plugin in ChatGPT. Generated audio must be aligned and mixed with the recovered stems; it is not silently substituted for recovered source audio.</p><p class="note"><strong>Important:</strong> AI separation estimates broad source groups; it does not guarantee isolated lead/backing singers, ad-libs, individual drum pieces, every synth/string/brass part, or separate reverb and delay. Some sound may bleed between stems.</p></section></main>
-<footer><span>STEM AUDIO WORKBENCH</span><span>Open-source separation · User-operated processing</span></footer><script src="app.js"></script></body></html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#101827">
+  <meta name="description" content="STEM Audio Workbench — separate a song into six aligned audio stems.">
+  <title>STEM — Audio Workbench</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#">
+      <span class="brand-mark">S</span>
+      <span>STEM<span class="brand-sub"> AUDIO WORKBENCH</span></span>
+    </a>
+    <span class="status-pill" id="service-pill"><i></i> Cloud processing service</span>
+  </header>
+  <main>
+    <section class="hero">
+      <div class="eyebrow">AI-ASSISTED SOURCE SEPARATION</div>
+      <h1>Hear every layer.<br><em>Work with every stem.</em></h1>
+      <p class="intro">Upload a finished song and create a downloadable pack of separated audio tracks, aligned to the original recording. Preview each stem directly in your browser.</p>
+    </section>
+
+    <section class="workspace">
+      <div class="section-head">
+        <div><div class="eyebrow">01 / YOUR RECORDING</div><h2>Upload audio</h2></div>
+        <span class="tag">MP3 · WAV · FLAC · M4A · AAC · OGG</span>
+      </div>
+      <p class="server-help" id="server-status" role="status">Checking the secure processing service…</p>
+      <form id="upload-form">
+        <label class="dropzone" id="dropzone" for="audio-file">
+          <span class="upload-icon">↑</span>
+          <strong>Drop your song here</strong>
+          <span>or browse audio files from your device</span>
+          <small>Maximum file size: 250 MB · Your original is stored privately for processing</small>
+          <input id="audio-file" name="audio" type="file" accept="audio/*,.flac,.m4a,.opus" required>
+        </label>
+        <div class="selected-file" id="selected-file" hidden></div>
+        <div class="format-row">
+          <label for="output-format">Stem export format</label>
+          <select id="output-format" name="outputFormat">
+            <option value="wav" selected>WAV · highest quality</option>
+            <option value="mp3">MP3 · smaller files</option>
+          </select>
+        </div>
+        <button class="primary" id="submit-btn" type="submit" disabled>Separate my audio <span>→</span></button>
+      </form>
+
+      <div class="job" id="job" hidden aria-live="polite">
+        <div class="job-top">
+          <div><div class="eyebrow">02 / PROCESSING</div><h3 id="job-title">Preparing your stems</h3></div>
+          <span class="job-state" id="job-state">WORKING</span>
+        </div>
+        <div class="progress"><span id="progress-bar"></span></div>
+        <p id="job-message">Your audio is being prepared…</p>
+        <a class="download" id="download-link" href="#" hidden>Download complete stem pack <span>↓</span></a>
+      </div>
+
+      <div id="results-panel" class="results-panel" hidden aria-live="polite">
+        <div class="eyebrow">03 / YOUR RESULTS</div>
+        <h2>Listen to your separated tracks</h2>
+        <div id="results-grid" class="results-grid"></div>
+      </div>
+    </section>
+
+    <section class="stem-section">
+      <div class="eyebrow">04 / WHAT YOU RECEIVE</div>
+      <h2>Six separated audio layers</h2>
+      <div class="stem-grid">
+        <article><b>01</b><strong>Vocals</strong><span>Lead and backing vocal content (may remain blended)</span></article>
+        <article><b>02</b><strong>Drums</strong><span>Drum and percussion content</span></article>
+        <article><b>03</b><strong>Bass</strong><span>Bass-range musical content</span></article>
+        <article><b>04</b><strong>Guitar</strong><span>Guitar-like content</span></article>
+        <article><b>05</b><strong>Piano</strong><span>Piano-like content</span></article>
+        <article><b>06</b><strong>Other</strong><span>Remaining accompaniment and sounds</span></article>
+      </div>
+      <p class="note"><strong>Important:</strong> AI separation estimates broad source groups; it does not guarantee isolated lead/backing singers, ad-libs, individual drum pieces, every synth/string/brass part, or separate reverb and delay. Some sound may bleed between stems.</p>
+    </section>
+  </main>
+  <footer><span>STEM AUDIO WORKBENCH</span><span>Private storage · Hosted audio separation</span></footer>
+  <script src="api-config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
