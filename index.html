@@ -26,16 +26,16 @@
     <section class="workspace">
       <div class="section-head">
         <div><div class="eyebrow">01 / YOUR RECORDING</div><h2>Upload audio</h2></div>
-        <span class="tag">MP3 · WAV · FLAC · M4A · AAC · OGG</span>
+        <span class="tag">MP3 · WAV · FLAC · M4A · AAC · OGG · ZIP</span>
       </div>
       <p class="server-help" id="server-status" role="status">Checking the secure processing service…</p>
       <form id="upload-form">
         <label class="dropzone" id="dropzone" for="audio-file">
           <span class="upload-icon">↑</span>
-          <strong>Drop your song here</strong>
-          <span>or browse audio files from your device</span>
-          <small>Maximum file size: 250 MB · Your original is stored privately for processing</small>
-          <input id="audio-file" name="audio" type="file" accept="audio/*,.flac,.m4a,.opus" required>
+          <strong>Drop your song or ZIP package here</strong>
+          <span>or browse audio or ZIP files from your device</span>
+          <small>ZIP packages can contain up to 20 audio tracks · Maximum upload: 250 MB</small>
+          <input id="audio-file" name="audio" type="file" accept="audio/*,.flac,.m4a,.opus,.zip,application/zip" required>
         </label>
         <div class="selected-file" id="selected-file" hidden></div>
         <div class="format-row">
