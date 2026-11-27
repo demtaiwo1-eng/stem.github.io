@@ -34,7 +34,7 @@ async function checkService() {
   try {
     const response = await apiFetch('/health');
     const data = await response.json();
-    if (!response.ok || data.ok !== true) throw new Error(data.error || 'Service health check failed.');
+    if (!response.ok || data.ok !== true || data.falConfigured !== true || data.objectStorage !== true) throw new Error('Processing service configuration is incomplete.');
     setServiceState(true, 'Processing service online. Your audio is uploaded securely and processed in the cloud.');
   } catch (error) {
     setServiceState(false, 'Processing service is temporarily unavailable. Please try again shortly.');
