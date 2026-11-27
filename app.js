@@ -62,7 +62,7 @@ async function loadResults(id){
  for(const item of data.results||[]){
   const card=document.createElement("article");card.className="result-card";
   const title=document.createElement("h3");title.textContent=item.name.toUpperCase();card.appendChild(title);
-  const meta=document.createElement("p");meta.textContent=(item.duration_seconds?Number(item.duration_seconds).toFixed(2)+" seconds":"Audio preview")+(item.diagnostics&&item.diagnostics.rms_dbfs!==undefined?" · RMS "+item.diagnostics.rms_dbfs+" dBFS":"");card.appendChild(meta);
+  const meta=document.createElement("p");meta.textContent=(item.duration_seconds?Number(item.duration_seconds).toFixed(2)+" seconds":"Audio preview")+(item.diagnostics&&item.diagnostics.rms_dbfs!==undefined?" · RMS "+item.diagnostics.rms_dbfs+" dBFS":"")+(item.note?" · "+item.note:"");card.appendChild(meta);
   const audio=document.createElement("audio");audio.controls=true;audio.preload="none";audio.dataset.path=item.mp3;audio.setAttribute("aria-label",item.name+" audio preview");card.appendChild(audio);try{const response=await apiFetch(item.mp3);if(!response.ok)throw new Error("Preview unavailable");audio.src=URL.createObjectURL(await response.blob());}catch(e){message("Could not load "+item.name+" preview: "+e.message);}
   const actions=document.createElement("div");actions.className="result-actions";
   for(const [label,path] of [["Download WAV",item.wav],["Download MP3",item.mp3]]){
