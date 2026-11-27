@@ -14,3 +14,11 @@
 .result-actions{display:flex;gap:8px;flex-wrap:wrap}
 .result-actions .secondary{padding:9px 12px;font-size:11px}
 @media(max-width:650px){.server-row{display:flex;flex-direction:column}.results-grid{grid-template-columns:1fr}.result-actions .secondary{flex:1}}
+
+.format-row{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:18px;color:var(--muted);font-size:13px}
+.format-row select{min-width:220px;padding:11px 13px;border:1px solid #42536a;border-radius:10px;background:#0b1525;color:var(--text);font:inherit}
+.server-help{font-size:12px;color:var(--muted);margin:8px 0 18px}
+.status-pill.is-online i{background:#72e2b4}
+.status-pill.is-offline i{background:#f2bd70}
+.result-download{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+@media(max-width:650px){.format-row{align-items:stretch;flex-direction:column}.format-row select{width:100%}}
