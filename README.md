@@ -1,48 +1,45 @@
-# STEM Audio Workbench — public interface
+# STEM Audio Workbench
 
-This repository contains the static public website for STEM. The free processing workflow is a Google Colab notebook in [demtaiwo1-eng/Stem](https://github.com/demtaiwo1-eng/Stem).
+STEM is a browser-based audio source-separation app. Upload a recording, follow its processing job, preview the separated tracks, and download the finished stem pack.
 
-## Free processing (recommended)
+**Live app:** https://demtaiwo1-eng.github.io/stem.github.io/
 
-Open the [STEM Free Colab Runner](https://colab.research.google.com/github/demtaiwo1-eng/Stem/blob/main/notebooks/STEM_Free_Colab.ipynb).
+## How processing works
 
-1. In Colab, choose **Runtime → Run all**.
-2. Wait for FFmpeg and Demucs to install and for the STEM engine to clone.
-3. In the upload cell, select your audio file.
-4. Wait for the six stems to be generated.
-5. Listen to the six previews and download the result ZIP.
+1. The GitHub Pages website uploads the selected audio to the STEM API over HTTPS.
+2. The API stores the original privately and creates a job in the queue.
+3. A GitHub-hosted Actions CPU runner claims queued work and runs the open-source Demucs model (`htdemucs_6s`).
+4. The runner sends the completed stem files back to the API.
+5. The API saves the results in private object storage. The website displays previews and download links.
 
-The notebook runs the existing `worker.py` directly. It does not require Gradio, a temporary share server, an API URL, Neon credentials, or paid hosting. The worker now checks vocal signal levels and, when the six-stem vocal estimate is unusually quiet, attempts a second Demucs model and compares candidates. The ZIP contains WAV and MP3 exports, an original reference, a manifest with signal diagnostics, and a simple stem-sum preview. All stems are normalized to stereo 44.1 kHz and the source duration. The preview is not a professionally mixed/mastered song.
+No Windows processor, Python installation, Google Colab session, or customer-side model setup is required.
 
-**Free-tier limitation:** Colab is on-demand, not always-on. Google controls free GPU availability, quotas and session duration. Keep the tab open until the ZIP downloads. CPU fallback is supported but can be slow. Do not upload audio you do not own or have permission to process.
+## Free processing and availability
 
-## Optional self-hosted API
+The worker uses standard GitHub-hosted CPU runners and is scheduled to poll for jobs every five minutes. Operators can also start it manually from [GitHub Actions](https://github.com/demtaiwo1-eng/Stem/actions/workflows/stem-free-cpu-worker.yml).
 
-The advanced upload form on the website is for operators who deploy the Node.js API from the Stem repository on a Docker-capable host with enough CPU, RAM and disk.
+This is a free-tier design, not an unlimited or guaranteed-throughput service. GitHub-hosted runner availability, fair-use policies, concurrency and execution limits apply. CPU source separation can be slow, especially for long or high-resolution recordings. The queue may wait for the next runner cycle.
 
-- **GitHub Pages:** serves only the static website.
-- **Neon Postgres:** stores processing-job records.
-- **Neon Object Storage:** stores originals and result files.
-- **Stem API + worker:** runs the Demucs/FFmpeg processing job.
+## Infrastructure
 
-For this advanced mode, configure the API with the Neon Postgres and object-storage environment values in the Stem repository's `.env.example`, then enter its public HTTPS URL under **Connect your own STEM API**. GitHub Pages itself does not run Demucs, and the advanced form will not work without that separate backend.
+- **Frontend:** GitHub Pages — `demtaiwo1-eng/stem.github.io`
+- **API:** Render — `https://stem-api-o0ij.onrender.com`
+- **Job records and private files:** Neon Postgres and private object storage
+- **Processing:** GitHub Actions hosted CPU runner
+- **Model:** Demucs `htdemucs_6s`
 
-Never put database passwords or Neon storage credentials in this repository or browser JavaScript. Add authentication, upload quotas and retention controls before accepting unrestricted public uploads.
+The API health endpoint is available at https://stem-api-o0ij.onrender.com/health. It reports API, database, object-storage and worker readiness.
 
-## GitHub Pages
+## Operator setup and maintenance
 
-The included Actions workflow deploys this repository to GitHub Pages on pushes to `main`. In repository **Settings → Pages**, set the build/deployment source to **GitHub Actions** if it is not already selected.
+The API and GitHub Actions worker share a secret named `STEM_WORKER_TOKEN`. Store it only in the Render service environment and the Stem repository's GitHub Actions secrets. Never put it in this public frontend repository, browser JavaScript, issue comments, or chat.
 
+The worker uses short-lived signed URLs to retrieve an input file and authenticated API endpoints to report progress and upload results. It does not need Neon database credentials.
 
-## AI music generation and reconstruction
+To inspect or manually start the worker, open [the worker workflow](https://github.com/demtaiwo1-eng/Stem/actions/workflows/stem-free-cpu-worker.yml). Check the API health endpoint before investigating a queued job.
 
-STEM keeps source separation separate from generated replacement material. The connected fal music-generation plugin can create original instrumental layers or replacement passages from ChatGPT. Those outputs may use account credits and are not part of the free Colab run. Import generated audio as a separate track, align it to the song's tempo/key/section, and label it as generated before mixing. The static GitHub Pages frontend does not inherit ChatGPT plugin credentials; never put a fal API key in browser JavaScript.
+## Supported results and limitations
 
-## Upload and receive results directly on the website using Colab
+STEM provides six aligned Demucs source groups: vocals, drums, bass, guitar, piano and other. AI separation estimates broad source groups; it cannot guarantee perfectly isolated lead or backing singers, ad-libs, individual drum pieces, every instrument, or separate reverb and delay. Some sound may bleed between stems.
 
-1. Open the [STEM Colab Bridge notebook](https://colab.research.google.com/github/demtaiwo1-eng/Stem/blob/main/notebooks/STEM_Free_Colab.ipynb) and choose **Runtime → Run all**.
-2. Wait for Colab to print a temporary HTTPS address and a session token.
-3. Open the [STEM website](https://demtaiwo1-eng.github.io/stem.github.io/), paste both values into **Connect your Colab processing session**, and connect.
-4. Upload your recording from the website. The website polls the Colab bridge, then displays audio previews and WAV/MP3 download options for each stem, plus the complete ZIP.
-
-The Colab runtime is the temporary compute server. Keep it running while uploads and jobs are active. If it disconnects or expires, restart the notebook and reconnect using the new URL and token. The URL and token are temporary; the token is required to protect the active bridge. GitHub Pages does not itself run the audio model.
+Do not upload audio unless you own it or have permission to process it. Apply appropriate upload quotas, retention rules and user support controls before opening the service to unrestricted public traffic.
