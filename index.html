@@ -38,6 +38,13 @@
           <input id="audio-file" name="audio" type="file" accept="audio/*,.flac,.m4a,.opus,.zip,application/zip" required>
         </label>
         <div class="selected-file" id="selected-file" hidden></div>
+        <section class="upload-progress-panel" id="upload-progress" hidden aria-live="polite">
+          <div class="upload-stage-head"><strong>1. File on this device</strong><span id="local-percent">Ready</span></div>
+          <div class="progress"><span id="local-progress-bar" style="width:100%"></span></div>
+          <div class="upload-stage-head server-stage"><strong>2. Transfer and secure server save</strong><span id="upload-percent">0%</span></div>
+          <div class="progress"><span id="upload-progress-bar"></span></div>
+          <p id="upload-stage">Preparing your attachment…</p>
+        </section>
         <div class="format-row">
           <label for="output-format">Stem export format</label>
           <select id="output-format" name="outputFormat">
