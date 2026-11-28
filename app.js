@@ -367,7 +367,7 @@ async function loadResults(id) {
     card.appendChild(title);
 
     const meta = document.createElement('p');
-    meta.textContent = (Number(item.sizeBytes || 0) / 1048576).toFixed(1) + ' MB · ' + String(data.outputFormat || 'audio').toUpperCase();
+    meta.textContent = [item.track, (Number(item.sizeBytes || 0) / 1048576).toFixed(1) + ' MB', String(data.outputFormat || 'audio').toUpperCase()].filter(Boolean).join(' · ');
     card.appendChild(meta);
 
     const audio = document.createElement('audio');
