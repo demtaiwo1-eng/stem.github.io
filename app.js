@@ -1,5 +1,8 @@
 const $ = selector => document.querySelector(selector);
 const apiBase = String(window.STEM_API_BASE || '').replace(/\/$/, '');
+const localWorkerBase = String(window.STEM_LOCAL_WORKER_URL || 'http://127.0.0.1:8765').replace(/\/$/, '');
+const cloudWorkerBase = String(window.STEM_CLOUD_WORKER_URL || '').replace(/\/$/, '');
+let processorMode = 'none';
 const form = $('#upload-form');
 const fileInput = $('#audio-file');
 const selected = $('#selected-file');
@@ -28,16 +31,43 @@ async function apiFetch(path, options = {}) {
 
 async function checkService() {
   if (!apiBase) {
-    setServiceState(false, 'The secure processing service is being connected. Uploads will be enabled automatically when it is ready.');
+    setServiceState(false, 'The STEM job-history service is not configured.');
     return;
   }
   try {
     const response = await apiFetch('/health');
     const data = await response.json();
-    if (!response.ok || data.ok !== true || data.falConfigured !== true || data.objectStorage !== true) throw new Error('Processing service configuration is incomplete.');
-    setServiceState(true, 'Processing service online. Your audio is uploaded securely and processed in the cloud.');
+    if (!response.ok || data.ok !== true || data.objectStorage !== true) throw new Error('STEM storage is not ready.');
+    let localReady = false;
+    try {
+      const local = await fetch(localWorkerBase + '/health', { signal: AbortSignal.timeout(2500) });
+      const status = await local.json();
+      localReady = local.ok && status.ok === true;
+    } catch (_) {}
+    if (localReady) {
+      processorMode = 'local';
+      setServiceState(true, 'Free local Demucs processor connected. Audio is processed on this device; only completed stems are saved to your STEM job history.');
+      servicePill.lastChild.textContent = ' Local processor';
+      return;
+    }
+    if (cloudWorkerBase) {
+      try {
+        const cloud = await fetch(cloudWorkerBase + '/health', { signal: AbortSignal.timeout(5000) });
+        const status = await cloud.json();
+        if (cloud.ok && status.ok === true) {
+          processorMode = 'cloud';
+          setServiceState(true, 'Local processor is offline. Free cloud fallback is available; its capacity may be quota-limited.');
+          servicePill.lastChild.textContent = ' Free cloud fallback';
+          return;
+        }
+      } catch (_) {}
+    }
+    processorMode = 'none';
+    setServiceState(false, 'STEM job history is online. Start the free local processor on your Windows computer to enable audio separation.');
+    servicePill.lastChild.textContent = ' Processor not connected';
   } catch (error) {
-    setServiceState(false, 'Processing service is temporarily unavailable. Please try again shortly.');
+    processorMode = 'none';
+    setServiceState(false, 'STEM job-history or private storage service is temporarily unavailable.');
   }
 }
 
@@ -66,63 +96,144 @@ drop.addEventListener('drop', event => {
   showFile(file);
 });
 
-form.addEventListener('submit', event => {
+form.addEventListener('submit', async event => {
   event.preventDefault();
   const file = fileInput.files[0];
   if (!file) return showMessage('Choose an audio file first.');
-  if (!apiBase) return showMessage('The cloud processing service is not connected yet.');
-  if (file.size > 250 * 1024 * 1024) return showMessage('Choose an audio file smaller than 250 MB.');
+  if (file.size > 250 * 1024 * 1024) return showMessage('Choose a file smaller than 250 MB.');
+  if (processorMode === 'none') return showMessage('Start the free STEM local processor first, then refresh this page.');
   button.disabled = true;
-  button.textContent = 'Uploading audio…';
+  button.textContent = 'Preparing free processing…';
   jobPanel.hidden = true;
   $('#results-panel').hidden = true;
   $('#download-link').hidden = true;
   $('#upload-progress').hidden = false;
   $('#job-title').textContent = 'Preparing your stems';
-  $('#job-state').textContent = 'UPLOADING';
+  $('#job-state').textContent = 'STARTING';
   $('#local-progress-bar').style.width = '100%';
   $('#local-percent').textContent = 'Ready';
-  $('#upload-stage').textContent = 'File ready on this device. Starting secure transfer…';
+  $('#upload-stage').textContent = 'Creating your private job-history record…';
   setUploadProgress(0);
-  const body = new FormData();
-  body.append('audio', file);
-  body.append('outputFormat', $('#output-format').value);
-  const xhr = new XMLHttpRequest();
-  xhr.open('POST', apiBase + '/api/jobs');
-  xhr.responseType = 'json';
-  xhr.timeout = 10 * 60 * 1000;
-  xhr.upload.addEventListener('progress', event => {
-    if (!event.lengthComputable) {
-      $('#upload-stage').textContent = 'Uploading to STEM server…';
-      return;
+  try {
+    const outputFormat = $('#output-format').value;
+    const createResponse = await apiFetch('/api/jobs/local', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: file.name,
+        outputFormat,
+        sizeBytes: file.size,
+        contentType: file.type || 'application/octet-stream',
+        sourceType: file.name.toLowerCase().endsWith('.zip') ? 'zip' : 'audio'
+      })
+    });
+    const job = await createResponse.json();
+    if (!createResponse.ok) throw new Error(job.error || 'Could not create the job-history record.');
+    activeJob = job.id;
+    $('#upload-stage').textContent = 'Job saved. Sending audio to the free ' + (processorMode === 'local' ? 'processor on this device' : 'cloud fallback') + '…';
+    setMessage('Open-source Demucs is preparing your audio. Processing time depends on your device and track length.');
+    jobPanel.hidden = false;
+    $('#job-state').textContent = 'PROCESSING';
+    $('#job-title').textContent = 'Separating your audio';
+    setProgress(12);
+
+    let archive;
+    let provider = processorMode;
+    try {
+      archive = await runWorker(localWorkerBase, file, outputFormat);
+      provider = 'local';
+    } catch (localError) {
+      if (!cloudWorkerBase) throw localError;
+      $('#upload-stage').textContent = 'Local processing is unavailable. Trying the configured free cloud fallback…';
+      archive = await runWorker(cloudWorkerBase, file, outputFormat);
+      provider = 'cloud';
     }
-    const percent = Math.round(event.loaded / event.total * 100);
-    setUploadProgress(percent);
-    $('#upload-stage').textContent = percent >= 100
-      ? 'Received by STEM — saving securely on the server…'
-      : 'Uploading to STEM server…';
-  });
-  xhr.upload.addEventListener('load', () => {
+    setProgress(82);
+    $('#upload-stage').textContent = 'Separation complete. Saving your stems and job history securely…';
+    await saveArchive(activeJob, archive);
     setUploadProgress(100);
-    $('#upload-stage').textContent = 'Upload sent — waiting for secure server storage…';
-  });
-  xhr.addEventListener('load', () => {
-    const data = xhr.response || (() => { try { return JSON.parse(xhr.responseText); } catch { return {}; } })();
-    if (xhr.status < 200 || xhr.status >= 300) return failUpload(data.error || 'Upload failed (' + xhr.status + ').');
-    activeJob = data.id;
-    $('#upload-stage').textContent = 'Saved securely. Starting audio separation…';
-    window.setTimeout(() => {
-      $('#upload-progress').hidden = true;
-      jobPanel.hidden = false;
-      setProgress(5);
-      setMessage('Upload complete. FAL Demucs is preparing your six stems…');
-      poll(data.id);
-    }, 450);
-  });
-  xhr.addEventListener('error', () => failUpload('Network connection interrupted during upload. Please try again.'));
-  xhr.addEventListener('timeout', () => failUpload('Upload timed out. Please check your connection and retry.'));
-  xhr.send(body);
+    $('#upload-stage').textContent = 'Completed stems saved to your STEM job history.';
+    $('#upload-progress').hidden = true;
+    setProgress(100);
+    setMessage(provider === 'local'
+      ? 'Completed with open-source Demucs on your device. Your result pack is saved in STEM.'
+      : 'Completed with the configured free cloud worker. Cloud availability and quotas may vary.');
+    $('#job-state').textContent = 'COMPLETED';
+    $('#job-title').textContent = 'Your stems are ready';
+    button.disabled = false;
+    button.innerHTML = 'Separate another song <span>→</span>';
+    const link = $('#download-link');
+    link.hidden = false;
+    link.onclick = downloadZip;
+    await loadResults(activeJob);
+  } catch (error) {
+    $('#upload-stage').textContent = error.message;
+    $('#job-state').textContent = 'ERROR';
+    setMessage(error.message);
+    button.disabled = false;
+    button.innerHTML = 'Try again <span>→</span>';
+  }
 });
+
+function runWorker(base, file, outputFormat) {
+  return new Promise((resolve, reject) => {
+    const body = new FormData();
+    body.append('audio', file);
+    body.append('outputFormat', outputFormat);
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', base + '/separate');
+    xhr.responseType = 'blob';
+    xhr.timeout = 4 * 60 * 60 * 1000;
+    xhr.upload.addEventListener('progress', event => {
+      if (event.lengthComputable) {
+        const percent = Math.round(event.loaded / event.total * 100);
+        setUploadProgress(percent);
+        $('#upload-stage').textContent = percent >= 100
+          ? 'Audio received. Demucs is separating the stems on the selected processor…'
+          : 'Sending audio to the selected free processor…';
+      }
+    });
+    xhr.addEventListener('load', () => {
+      if (xhr.status < 200 || xhr.status >= 300) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          try { reject(new Error(JSON.parse(reader.result).detail || 'Free processor failed.')); }
+          catch (_) { reject(new Error('Free processor failed (' + xhr.status + ').')); }
+        };
+        reader.readAsText(xhr.response);
+        return;
+      }
+      resolve(xhr.response);
+    });
+    xhr.addEventListener('error', () => reject(new Error('Could not reach the free processor. Check that it is running and refresh STEM.')));
+    xhr.addEventListener('timeout', () => reject(new Error('Processing timed out. Try a shorter track or use the cloud fallback if available.')));
+    xhr.send(body);
+  });
+}
+
+function saveArchive(jobId, archive) {
+  return new Promise((resolve, reject) => {
+    const body = new FormData();
+    body.append('archive', archive, 'STEM-results.zip');
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', apiBase + '/api/jobs/' + encodeURIComponent(jobId) + '/local-result');
+    xhr.responseType = 'json';
+    xhr.upload.addEventListener('progress', event => {
+      if (event.lengthComputable) {
+        const percent = Math.round(event.loaded / event.total * 100);
+        setUploadProgress(percent);
+        $('#upload-stage').textContent = 'Saving completed stems to private storage… ' + percent + '%';
+      }
+    });
+    xhr.addEventListener('load', () => {
+      const data = xhr.response || {};
+      if (xhr.status < 200 || xhr.status >= 300) reject(new Error(data.error || 'Could not save the completed stems.'));
+      else resolve(data);
+    });
+    xhr.addEventListener('error', () => reject(new Error('Connection lost while saving the completed stems.')));
+    xhr.send(body);
+  });
+}
 
 function setUploadProgress(value) {
   const percent = Math.max(0, Math.min(100, value));
