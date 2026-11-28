@@ -66,40 +66,76 @@ drop.addEventListener('drop', event => {
   showFile(file);
 });
 
-form.addEventListener('submit', async event => {
+form.addEventListener('submit', event => {
   event.preventDefault();
   const file = fileInput.files[0];
   if (!file) return showMessage('Choose an audio file first.');
   if (!apiBase) return showMessage('The cloud processing service is not connected yet.');
   if (file.size > 250 * 1024 * 1024) return showMessage('Choose an audio file smaller than 250 MB.');
-
   button.disabled = true;
   button.textContent = 'Uploading audio…';
-  jobPanel.hidden = false;
+  jobPanel.hidden = true;
   $('#results-panel').hidden = true;
   $('#download-link').hidden = true;
+  $('#upload-progress').hidden = false;
   $('#job-title').textContent = 'Preparing your stems';
   $('#job-state').textContent = 'UPLOADING';
-  setProgress(3);
-  setMessage('Uploading ' + file.name + ' securely…');
-
-  try {
-    const body = new FormData();
-    body.append('audio', file);
-    body.append('outputFormat', $('#output-format').value);
-    const response = await apiFetch('/api/jobs', { method: 'POST', body });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || 'Upload failed.');
+  $('#local-progress-bar').style.width = '100%';
+  $('#local-percent').textContent = 'Ready';
+  $('#upload-stage').textContent = 'File ready on this device. Starting secure transfer…';
+  setUploadProgress(0);
+  const body = new FormData();
+  body.append('audio', file);
+  body.append('outputFormat', $('#output-format').value);
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', apiBase + '/api/jobs');
+  xhr.responseType = 'json';
+  xhr.timeout = 10 * 60 * 1000;
+  xhr.upload.addEventListener('progress', event => {
+    if (!event.lengthComputable) {
+      $('#upload-stage').textContent = 'Uploading to STEM server…';
+      return;
+    }
+    const percent = Math.round(event.loaded / event.total * 100);
+    setUploadProgress(percent);
+    $('#upload-stage').textContent = percent >= 100
+      ? 'Received by STEM — saving securely on the server…'
+      : 'Uploading to STEM server…';
+  });
+  xhr.upload.addEventListener('load', () => {
+    setUploadProgress(100);
+    $('#upload-stage').textContent = 'Upload sent — waiting for secure server storage…';
+  });
+  xhr.addEventListener('load', () => {
+    const data = xhr.response || (() => { try { return JSON.parse(xhr.responseText); } catch { return {}; } })();
+    if (xhr.status < 200 || xhr.status >= 300) return failUpload(data.error || 'Upload failed (' + xhr.status + ').');
     activeJob = data.id;
-    setMessage('Upload complete. FAL Demucs is preparing your six stems…');
-    poll(data.id);
-  } catch (error) {
-    setMessage(error.message);
-    $('#job-state').textContent = 'ERROR';
-    button.disabled = false;
-    button.innerHTML = 'Try again <span>→</span>';
-  }
+    $('#upload-stage').textContent = 'Saved securely. Starting audio separation…';
+    window.setTimeout(() => {
+      $('#upload-progress').hidden = true;
+      jobPanel.hidden = false;
+      setProgress(5);
+      setMessage('Upload complete. FAL Demucs is preparing your six stems…');
+      poll(data.id);
+    }, 450);
+  });
+  xhr.addEventListener('error', () => failUpload('Network connection interrupted during upload. Please try again.'));
+  xhr.addEventListener('timeout', () => failUpload('Upload timed out. Please check your connection and retry.'));
+  xhr.send(body);
 });
+
+function setUploadProgress(value) {
+  const percent = Math.max(0, Math.min(100, value));
+  $('#upload-progress-bar').style.width = percent + '%';
+  $('#upload-percent').textContent = percent + '%';
+}
+
+function failUpload(message) {
+  $('#upload-stage').textContent = message;
+  $('#job-state').textContent = 'ERROR';
+  button.disabled = false;
+  button.innerHTML = 'Try again <span>→</span>';
+}
 
 function poll(id) {
   if (pollHandle) clearInterval(pollHandle);
