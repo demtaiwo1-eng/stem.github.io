@@ -14,7 +14,7 @@
       <span class="brand-mark">S</span>
       <span>STEM<span class="brand-sub"> AUDIO WORKBENCH</span></span>
     </a>
-    <span class="status-pill" id="service-pill"><i></i> Cloud processing service</span>
+    <span class="status-pill" id="service-pill"><i></i> Free processing</span>
   </header>
   <main>
     <section class="hero">
@@ -28,7 +28,11 @@
         <div><div class="eyebrow">01 / YOUR RECORDING</div><h2>Upload audio</h2></div>
         <span class="tag">MP3 · WAV · FLAC · M4A · AAC · OGG · ZIP</span>
       </div>
-      <p class="server-help" id="server-status" role="status">Checking the secure processing service…</p>
+      <p class="server-help" id="server-status" role="status">Checking STEM storage and free processors…</p>
+      <section class="free-runner" aria-label="Free local processor setup">
+        <div><div class="eyebrow">FREE PROCESSING ENGINE</div><h2>Run Demucs on your computer</h2><p>Start the open-source processor once. Audio is separated on your device; only the finished stems are uploaded to your private STEM job history. A free cloud fallback can be connected later, subject to its usage quota.</p></div>
+        <a class="free-runner-link" href="https://github.com/demtaiwo1-eng/Stem/tree/main/local-worker" target="_blank" rel="noopener">Get the Windows processor <span>↗</span></a>
+      </section>
       <form id="upload-form">
         <label class="dropzone" id="dropzone" for="audio-file">
           <span class="upload-icon">↑</span>
@@ -86,7 +90,7 @@
       <p class="note"><strong>Important:</strong> AI separation estimates broad source groups; it does not guarantee isolated lead/backing singers, ad-libs, individual drum pieces, every synth/string/brass part, or separate reverb and delay. Some sound may bleed between stems.</p>
     </section>
   </main>
-  <footer><span>STEM AUDIO WORKBENCH</span><span>Private storage · Hosted audio separation</span></footer>
+  <footer><span>STEM AUDIO WORKBENCH</span><span>Private job history · Open-source Demucs processing</span></footer>
   <script src="api-config.js"></script>
   <script src="app.js"></script>
 </body>
