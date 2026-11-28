@@ -22,3 +22,4 @@
 .status-pill.is-offline i{background:#f2bd70}
 .result-download{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
 @media(max-width:650px){.format-row{align-items:stretch;flex-direction:column}.format-row select{width:100%}}
+\n.upload-progress-panel{margin-top:18px;padding:17px;border:1px solid var(--line);border-radius:14px;background:#0b1525aa}.upload-stage-head{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:var(--text)}.upload-stage-head span{color:var(--accent);font-weight:800;font-variant-numeric:tabular-nums}.server-stage{margin-top:17px}.upload-progress-panel .progress{margin-top:8px}.upload-progress-panel p{margin:12px 0 0;color:var(--muted);font-size:12px;min-height:1.5em}
