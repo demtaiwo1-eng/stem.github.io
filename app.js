@@ -3,6 +3,7 @@ const apiBase = String(window.STEM_API_BASE || '').replace(/\/$/, '');
 const localWorkerBase = String(window.STEM_LOCAL_WORKER_URL || 'http://127.0.0.1:8765').replace(/\/$/, '');
 const cloudWorkerBase = String(window.STEM_CLOUD_WORKER_URL || '').replace(/\/$/, '');
 let processorMode = 'none';
+let jobServiceOnline = false;
 const form = $('#upload-form');
 const fileInput = $('#audio-file');
 const selected = $('#selected-file');
@@ -38,6 +39,7 @@ async function checkService() {
     const response = await apiFetch('/health');
     const data = await response.json();
     if (!response.ok || data.ok !== true || data.objectStorage !== true) throw new Error('STEM storage is not ready.');
+    jobServiceOnline = true;
     let localReady = false;
     try {
       const local = await fetch(localWorkerBase + '/health', { signal: AbortSignal.timeout(2500) });
@@ -66,8 +68,30 @@ async function checkService() {
     setServiceState(false, 'STEM job history is online. Start the free local processor on your Windows computer to enable audio separation.');
     servicePill.lastChild.textContent = ' Processor not connected';
   } catch (error) {
+    jobServiceOnline = false;
     processorMode = 'none';
     setServiceState(false, 'STEM job-history or private storage service is temporarily unavailable.');
+  }
+}
+
+
+async function checkLocalProcessor() {
+  try {
+    const response = await fetch(localWorkerBase + '/health', { signal: AbortSignal.timeout(2500) });
+    const status = await response.json();
+    if (response.ok && status.ok === true && jobServiceOnline) {
+      processorMode = 'local';
+      setServiceState(true, 'Free local Demucs processor connected. Audio is processed on this device; only completed stems are saved to your STEM job history.');
+      servicePill.lastChild.textContent = ' Local processor';
+      return;
+    }
+  } catch (_) {}
+  if (processorMode === 'local') {
+    processorMode = 'none';
+    setServiceState(false, jobServiceOnline
+      ? 'STEM job history is online. Start the free local processor to enable audio separation.'
+      : 'STEM job-history or private storage service is temporarily unavailable.');
+    servicePill.lastChild.textContent = ' Processor not connected';
   }
 }
 
@@ -404,3 +428,4 @@ function showMessage(value) {
 }
 
 checkService();
+setInterval(checkLocalProcessor, 5000);
