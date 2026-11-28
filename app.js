@@ -52,9 +52,9 @@ async function checkService() {
     }
     if (cloudWorkerBase) {
       try {
-        const cloud = await fetch(cloudWorkerBase + '/health', { signal: AbortSignal.timeout(5000) });
+        const cloud = await fetch(cloudWorkerBase + '/config', { signal: AbortSignal.timeout(5000) });
         const status = await cloud.json();
-        if (cloud.ok && status.ok === true) {
+        if (cloud.ok && status && Array.isArray(status.dependencies)) {
           processorMode = 'cloud';
           setServiceState(true, 'Local processor is offline. Free cloud fallback is available; its capacity may be quota-limited.');
           servicePill.lastChild.textContent = ' Free cloud fallback';
@@ -145,7 +145,7 @@ form.addEventListener('submit', async event => {
     } catch (localError) {
       if (!cloudWorkerBase) throw localError;
       $('#upload-stage').textContent = 'Local processing is unavailable. Trying the configured free cloud fallback…';
-      archive = await runWorker(cloudWorkerBase, file, outputFormat);
+      archive = await runCloudWorker(cloudWorkerBase, file, outputFormat);
       provider = 'cloud';
     }
     setProgress(82);
@@ -209,6 +209,51 @@ function runWorker(base, file, outputFormat) {
     xhr.addEventListener('timeout', () => reject(new Error('Processing timed out. Try a shorter track or use the cloud fallback if available.')));
     xhr.send(body);
   });
+}
+
+async function runCloudWorker(base, file, outputFormat) {
+  const uploadForm = new FormData();
+  uploadForm.append('files', file, file.name);
+  const uploadResponse = await fetch(base + '/gradio_api/upload', { method: 'POST', body: uploadForm });
+  if (!uploadResponse.ok) throw new Error('The free cloud worker could not accept the upload.');
+  const uploaded = await uploadResponse.json();
+  const filePath = Array.isArray(uploaded) ? uploaded[0] : uploaded;
+  const payload = {
+    data: [{ path: typeof filePath === 'string' ? filePath : filePath.path, orig_name: file.name, mime_type: file.type }, outputFormat]
+  };
+  const start = await fetch(base + '/gradio_api/call/separate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!start.ok) throw new Error('The free cloud worker could not start this job.');
+  const started = await start.json();
+  if (!started.event_id) throw new Error('The free cloud worker returned no job identifier.');
+  const deadline = Date.now() + 60 * 60 * 1000;
+  while (Date.now() < deadline) {
+    await new Promise(resolve => setTimeout(resolve, 2500));
+    const poll = await fetch(base + '/gradio_api/call/separate/' + encodeURIComponent(started.event_id));
+    if (!poll.ok) throw new Error('The free cloud worker status check failed.');
+    const stream = await poll.text();
+    const lines = stream.split(/\r?\n/);
+    let eventName = '';
+    let dataLine = '';
+    for (const line of lines) {
+      if (line.startsWith('event:')) eventName = line.slice(6).trim();
+      if (line.startsWith('data:')) dataLine = line.slice(5).trim();
+    }
+    if (eventName === 'error') throw new Error(dataLine || 'The free cloud worker could not process this track.');
+    if (eventName === 'complete' && dataLine) {
+      const result = JSON.parse(dataLine);
+      const item = Array.isArray(result) ? result[0] : result;
+      const fileUrl = item?.url || (item?.path ? base + '/gradio_api/file=' + encodeURIComponent(item.path) : '');
+      if (!fileUrl) throw new Error('The free cloud worker returned an invalid result.');
+      const resultResponse = await fetch(fileUrl);
+      if (!resultResponse.ok) throw new Error('Could not download the free cloud worker result.');
+      return resultResponse.blob();
+    }
+  }
+  throw new Error('The free cloud worker timed out. Try the local processor or a shorter track.');
 }
 
 function saveArchive(jobId, archive) {
