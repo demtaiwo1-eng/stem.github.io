@@ -40,17 +40,14 @@ async function checkService() {
     const data = await response.json();
     if (!response.ok || data.ok !== true || data.objectStorage !== true) throw new Error('STEM private storage is not ready.');
     if (!data.workerConfigured) {
-      setServiceState(false, 'STEM storage is online, but the secure Oracle worker has not been configured yet.');
+      setServiceState(false, 'STEM storage is online, but the secure CPU worker has not been configured yet.');
       servicePill.textContent = ' Worker setup pending';
       return;
     }
-    if (!data.workerOnline) {
-      setServiceState(false, 'The Oracle Always Free processor is not connected. Uploads will open when the worker is online.');
-      servicePill.textContent = ' Worker offline';
-      return;
-    }
-    setServiceState(true, 'Online processing is ready. Your audio is handled by the Oracle Always Free CPU worker; processing may take longer than GPU processing.');
-    servicePill.textContent = ' Oracle Always Free · Online';
+    setServiceState(true, data.workerOnline
+      ? 'The free GitHub Actions CPU runner is active. Your upload will enter the processing queue.'
+      : 'The secure queue is ready. A free GitHub-hosted CPU runner will pick up your audio; it may take a little time to start.');
+    servicePill.textContent = data.workerOnline ? ' GitHub Actions · Active' : ' GitHub Actions · Queue ready';
   } catch (error) {
     setServiceState(false, 'STEM API or private storage is temporarily unavailable.');
     servicePill.textContent = ' Service unavailable';
@@ -134,7 +131,7 @@ form.addEventListener('submit', async event => {
     $('#job-title').textContent = 'Waiting for the free processor';
     $('#job-state').textContent = 'QUEUED';
     setProgress(5);
-    setMessage('Your audio is safely stored. The Oracle Always Free CPU worker will process it when available.');
+    setMessage('Your audio is safely stored. The free GitHub Actions CPU runner will process it when available.');
     button.disabled = true;
     button.textContent = 'Processing in queue…';
     poll(activeJob);
@@ -281,4 +278,4 @@ function showMessage(value) {
 }
 
 checkService();
-setInterval(checkLocalProcessor, 5000);
+setInterval(checkService, 30000);
