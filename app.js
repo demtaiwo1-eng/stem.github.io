@@ -12,6 +12,7 @@ const serverStatus = $('#server-status');
 const servicePill = $('#service-pill');
 let pollHandle = null;
 let activeJob = null;
+let isUploading = false;
 
 function setServiceState(online, message) {
   serverStatus.textContent = message;
@@ -87,6 +88,7 @@ form.addEventListener('submit', async event => {
   if (!file) return showMessage('Choose an audio file first.');
   if (file.size > 250 * 1024 * 1024) return showMessage('Choose a file smaller than 250 MB.');
   if (!apiBase) return showMessage('The STEM API is not connected.');
+  isUploading = true;
   button.disabled = true;
   button.textContent = 'Uploading securely…';
   jobPanel.hidden = true;
@@ -121,6 +123,7 @@ form.addEventListener('submit', async event => {
       $('#upload-stage').textContent = message;
       $('#job-state').textContent = 'ERROR';
       setMessage(message);
+      isUploading = false;
       button.disabled = false;
       button.innerHTML = 'Try again <span>→</span>';
       return;
@@ -139,6 +142,7 @@ form.addEventListener('submit', async event => {
   xhr.addEventListener('error', () => {
     $('#upload-stage').textContent = 'Connection lost while uploading. Your job may not have been created.';
     $('#job-state').textContent = 'ERROR';
+    isUploading = false;
     button.disabled = false;
     button.innerHTML = 'Try again <span>→</span>';
   });
@@ -180,6 +184,7 @@ function poll(id) {
 
       if (data.status === 'completed') {
         clearInterval(pollHandle);
+        isUploading = false;
         button.disabled = false;
         button.innerHTML = 'Separate another song <span>→</span>';
         const link = $('#download-link');
@@ -188,6 +193,7 @@ function poll(id) {
         await loadResults(id);
       } else if (data.status === 'failed') {
         clearInterval(pollHandle);
+        isUploading = false;
         button.disabled = false;
         button.innerHTML = 'Try another upload <span>→</span>';
       }
