@@ -17,7 +17,7 @@ function setServiceState(online, message) {
   serverStatus.textContent = message;
   servicePill.classList.toggle('is-online', online);
   servicePill.classList.toggle('is-offline', !online);
-  button.disabled = !online;
+  button.disabled = !online || isUploading;
 }
 
 async function apiFetch(path, options = {}) {
