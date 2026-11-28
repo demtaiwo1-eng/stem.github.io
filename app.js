@@ -247,7 +247,7 @@ async function loadResults(id) {
     const audio = document.createElement('audio');
     audio.controls = true;
     audio.preload = 'none';
-    audio.src = item.downloadUrl;
+    audio.src = apiBase + item.streamUrl;
     audio.setAttribute('aria-label', item.stem + ' audio preview');
     card.appendChild(audio);
 
@@ -255,7 +255,7 @@ async function loadResults(id) {
     actions.className = 'result-actions';
     const download = document.createElement('a');
     download.className = 'secondary result-download';
-    download.href = item.downloadUrl;
+    download.href = apiBase + item.streamUrl + '?download=1';
     download.download = item.fileName || (item.stem + '.' + data.outputFormat);
     download.textContent = 'Download ' + String(data.outputFormat || '').toUpperCase();
     actions.appendChild(download);
